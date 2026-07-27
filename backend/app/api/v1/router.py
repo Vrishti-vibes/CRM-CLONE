@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     tasks,
     products,
     reports,
+    settings,
 )
 
 api_router = APIRouter()
@@ -23,3 +24,4 @@ api_router.include_router(activities.router, tags=["Activities"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["Tasks & Activities"])
 api_router.include_router(products.router, prefix="/products", tags=["Products"])
 api_router.include_router(reports.router, prefix="/reports", tags=["Reports & Analytics"])
+api_router.include_router(settings.router, prefix="/settings", tags=["Settings & RBAC"])
