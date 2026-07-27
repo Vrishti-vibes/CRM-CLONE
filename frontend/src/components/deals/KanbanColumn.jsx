@@ -1,67 +1,74 @@
 import React from 'react';
-import DealCard from './DealCard';
 
-export default function KanbanColumn({
-  stage,
-  deals,
-  onEditDeal,
-  onDeleteDeal,
-  onDragStart,
-  onDropDeal,
-}) {
-  const totalValue = deals.reduce((acc, deal) => acc + (deal.amount || 0), 0);
+export default function KanbanColumn({ column, onDragStart, onDragOver, onDrop, onAddDeal }) {
+  const totalSum = column.deals.reduce((sum, d) => {
+    const val = parseFloat(d.amount.replace(/[^0-9.-]+/g, "")) || 0;
+    return sum + val;
+  }, 0);
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const dealId = e.dataTransfer.getData('text/plain');
-    if (dealId) {
-      onDropDeal(parseInt(dealId, 10), stage.id);
-    }
-  };
+  const formattedSum = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  }).format(totalSum);
 
   return (
-    <div
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-      className="flex-1 min-w-[280px] bg-slate-900/80 border border-slate-800 rounded-2xl flex flex-col max-h-[calc(100vh-180px)] overflow-hidden"
+    <div 
+      onDragOver={onDragOver}
+      onDrop={(e) => onDrop(e, column.id)}
+      className="w-72 shrink-0 bg-slate-200/50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 rounded-xl flex flex-col max-h-full min-h-[550px]"
     >
       {/* Column Header */}
-      <div className="p-4 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={`w-3 h-3 rounded-full ${stage.color}`}></span>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-            {stage.title}
-          </h3>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-            {deals.length}
+      <div className={`p-3.5 border-t-4 ${column.borderColor || 'border-indigo-500'} bg-white dark:bg-slate-900 rounded-t-xl border-b border-slate-200/80 dark:border-slate-800 shadow-xs`}>
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+            {column.stageTitle}
+          </h4>
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+            {formattedSum}
           </span>
         </div>
-        <span className="text-xs font-semibold text-slate-400">
-          ${totalValue.toLocaleString()}
-        </span>
+        <div className="text-[11px] text-slate-400 mt-1 font-medium">
+          {column.deals.length} {column.deals.length === 1 ? 'Opportunity' : 'Opportunities'}
+        </div>
       </div>
 
-      {/* Cards Scrollable Container */}
-      <div className="p-3 flex-1 overflow-y-auto space-y-3 min-h-[150px]">
-        {deals.length === 0 ? (
-          <div className="h-28 border-2 border-dashed border-slate-800 rounded-xl flex items-center justify-center text-xs text-slate-600 font-medium">
-            Drag deals here
+      {/* Cards List */}
+      <div className="p-2.5 overflow-y-auto space-y-2.5 flex-1">
+        {column.deals.length === 0 ? (
+          <div className="h-32 border border-dashed border-slate-300 dark:border-slate-800 rounded-lg flex items-center justify-center text-[11px] text-slate-400 font-medium">
+            Drop deals here
           </div>
         ) : (
-          deals.map((deal) => (
-            <DealCard
+          column.deals.map((deal) => (
+            <div
               key={deal.id}
-              deal={deal}
-              onEdit={onEditDeal}
-              onDelete={onDeleteDeal}
-              onDragStart={onDragStart}
-            />
+              draggable
+              onDragStart={(e) => onDragStart(e, deal.id, column.id)}
+              className="p-3.5 bg-white dark:bg-slate-800 rounded-lg border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:border-indigo-500/80 dark:hover:border-indigo-500/80 cursor-grab active:cursor-grabbing transition-all group hover:shadow-md"
+            >
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                {deal.name}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">{deal.company}</p>
+
+              <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs font-bold">
+                <span className="text-indigo-600 dark:text-indigo-400">{deal.amount}</span>
+                <span className="text-[10px] text-slate-400 font-normal">{deal.date}</span>
+              </div>
+            </div>
           ))
         )}
+      </div>
+
+      {/* Bottom Action */}
+      <div className="p-2 border-t border-slate-200/80 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 rounded-b-xl">
+        <button 
+          onClick={() => onAddDeal(column.id)}
+          className="w-full py-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors text-left pl-2 flex items-center gap-1 cursor-pointer"
+        >
+          <span>+ Add Deal</span>
+        </button>
       </div>
     </div>
   );

@@ -1,59 +1,92 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services/authService';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const initAuth = async () => {
-      if (token) {
-        try {
-          const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
-        } catch (err) {
-          console.error('Failed to restore session:', err);
-          logout();
-        }
-      }
-      setLoading(false);
-    };
-    initAuth();
-  }, [token]);
-
-  const login = async (credentials) => {
-    const data = await authService.login(credentials);
-    localStorage.setItem('token', data.access_token);
-    setToken(data.access_token);
-    const currentUser = await authService.getCurrentUser();
-    setUser(currentUser);
-    return currentUser;
+  // Default accounts for demonstration & quick testing
+  const DEMO_ACCOUNTS = {
+    admin: {
+      id: 'usr-001',
+      name: 'Elena Rostova',
+      email: 'admin@enterprise.io',
+      role: 'admin',
+      title: 'Chief Revenue Officer',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+      permissions: ['all', 'manage_team', 'system_config', 'export_reports']
+    },
+    user: {
+      id: 'usr-002',
+      name: 'Ted Watson',
+      email: 'ted@enterprise.io',
+      role: 'sales_rep',
+      title: 'Senior Account Executive',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      permissions: ['view_deals', 'edit_deals', 'create_tasks']
+    }
   };
 
-  const register = async (userData) => {
-    return await authService.register(userData);
+  useEffect(() => {
+    // Check saved session on app startup
+    const savedSession = localStorage.getItem('crm_active_user');
+    if (savedSession) {
+      try {
+        setUser(JSON.parse(savedSession));
+      } catch {
+        setUser(DEMO_ACCOUNTS.admin);
+      }
+    } else {
+      // Default initial login as Admin
+      setUser(DEMO_ACCOUNTS.admin);
+      localStorage.setItem('crm_active_user', JSON.stringify(DEMO_ACCOUNTS.admin));
+    }
+    setLoading(false);
+  }, []);
+
+  const login = (email, password) => {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        if (!email || !password) {
+          reject(new Error('Please provide valid credentials.'));
+          return;
+        }
+
+        const isAdmin = email.toLowerCase().includes('admin');
+        const loggedUser = isAdmin ? DEMO_ACCOUNTS.admin : {
+          id: `usr-${Date.now()}`,
+          name: email.split('@')[0].replace('.', ' '),
+          email: email,
+          role: 'sales_rep',
+          title: 'Account Executive',
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+          permissions: ['view_deals', 'edit_deals']
+        };
+
+        setUser(loggedUser);
+        localStorage.setItem('crm_active_user', JSON.stringify(loggedUser));
+        resolve(loggedUser);
+      }, 600);
+    });
+  };
+
+  const switchRole = (targetRole) => {
+    const updatedUser = targetRole === 'admin' ? DEMO_ACCOUNTS.admin : DEMO_ACCOUNTS.user;
+    setUser(updatedUser);
+    localStorage.setItem('crm_active_user', JSON.stringify(updatedUser));
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
     setUser(null);
+    localStorage.removeItem('crm_active_user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
-      {children}
+    <AuthContext.Provider value={{ user, loading, login, logout, switchRole }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);

@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from app.api.v1.endpoints import ai
 from app.api.v1.endpoints import (
     auth,
     dashboard,
@@ -25,3 +26,5 @@ api_router.include_router(tasks.router, prefix="/tasks", tags=["Tasks & Activiti
 api_router.include_router(products.router, prefix="/products", tags=["Products"])
 api_router.include_router(reports.router, prefix="/reports", tags=["Reports & Analytics"])
 api_router.include_router(settings.router, prefix="/settings", tags=["Settings & RBAC"])
+api_router.include_router(ai.router, prefix="/ai", tags=["ai"])
+api_router.include_router(ai.router, prefix="/ai", tags=["AI Assistant"])

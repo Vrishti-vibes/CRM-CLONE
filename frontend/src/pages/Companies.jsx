@@ -1,285 +1,147 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { companyService } from '../services/companyService';
-import CompanyModal from '../components/companies/CompanyModal';
-import {
-  FiBriefcase,
-  FiPlus,
-  FiSearch,
-  FiEdit2,
-  FiTrash2,
-  FiGlobe,
-  FiPhone,
-  FiUsers,
-  FiDollarSign,
-  FiChevronLeft,
-  FiChevronRight,
-} from 'react-icons/fi';
+import React, { useState } from 'react';
+import { FiSearch, FiPlus, FiGlobe, FiUsers, FiDollarSign, FiX } from 'react-icons/fi';
 
 export default function Companies() {
-  const [companies, setCompanies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [industryFilter, setIndustryFilter] = useState('');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
+  const [companies, setCompanies] = useState([
+    { id: 1, name: 'Zylker Corp', industry: 'SaaS / Technology', employees: 250, revenue: '₹5.67 Cr', owner: 'Elena Rostova' },
+    { id: 2, name: 'Cyberdyne', industry: 'Artificial Intelligence', employees: 500, revenue: '₹15.0 Cr', owner: 'Elena Rostova' },
+    { id: 3, name: 'Continental', industry: 'Security Services', employees: 1200, revenue: '₹25.0 Cr', owner: 'Alex Morgan' },
+  ]);
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingCompany, setEditingCompany] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newCompany, setNewCompany] = useState({ name: '', industry: '', employees: '', revenue: '', owner: 'Elena Rostova' });
 
-  const fetchCompanies = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await companyService.getCompanies({
-        page,
-        size: 8,
-        search: search || undefined,
-        industry: industryFilter || undefined,
-      });
-      setCompanies(res.items);
-      setTotalPages(res.pages);
-      setTotalItems(res.total);
-    } catch (err) {
-      console.error('Failed to fetch companies:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, search, industryFilter]);
-
-  useEffect(() => {
-    fetchCompanies();
-  }, [fetchCompanies]);
-
-  const handleCreateOrUpdate = async (formData) => {
-    if (editingCompany) {
-      await companyService.updateCompany(editingCompany.id, formData);
-    } else {
-      await companyService.createCompany(formData);
-    }
-    fetchCompanies();
+  const handleAddCompany = (e) => {
+    e.preventDefault();
+    if (!newCompany.name.trim()) return;
+    setCompanies(prev => [{ id: Date.now(), ...newCompany }, ...prev]);
+    setNewCompany({ name: '', industry: '', employees: '', revenue: '', owner: 'Elena Rostova' });
+    setShowAddModal(false);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this company profile?')) {
-      try {
-        await companyService.deleteCompany(id);
-        fetchCompanies();
-      } catch (err) {
-        console.error('Failed to delete company:', err);
-      }
-    }
-  };
-
-  const openCreateModal = () => {
-    setEditingCompany(null);
-    setModalOpen(true);
-  };
-
-  const openEditModal = (company) => {
-    setEditingCompany(company);
-    setModalOpen(true);
-  };
+  const filteredCompanies = companies.filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.industry.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2.5">
-            <FiBriefcase className="text-brand-500" />
-            <span>Companies Directory</span>
-          </h1>
-          <p className="text-slate-400 text-xs mt-1">
-            Manage your target accounts and corporate client accounts ({totalItems} total)
-          </p>
+    <div className="flex flex-col h-full w-full bg-slate-50 dark:bg-darkbg text-slate-800 dark:text-slate-100 overflow-hidden select-none">
+      
+      {/* Top Header Bar */}
+      <div className="h-14 bg-white dark:bg-darkbg-card border-b border-slate-200 dark:border-darkbg-border px-6 flex items-center justify-between shrink-0">
+        <div className="relative">
+          <FiSearch className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="Search companies..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 pr-4 py-1.5 bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl text-xs font-semibold outline-none w-64"
+          />
         </div>
-
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-brand-600/30 transition-all self-start sm:self-auto"
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-colors"
         >
-          <FiPlus className="w-4 h-4" />
-          <span>Add Company</span>
+          <FiPlus className="w-4 h-4" /> Add Company
         </button>
       </div>
 
-      {/* Search and Filters */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:w-80">
-          <FiSearch className="absolute left-3.5 top-3 text-slate-400 w-4 h-4" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Search by name, website, industry..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-200 placeholder-slate-400 text-xs focus:outline-none focus:border-brand-500"
-          />
-        </div>
-
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <input
-            type="text"
-            value={industryFilter}
-            onChange={(e) => {
-              setIndustryFilter(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Filter by industry..."
-            className="w-full sm:w-48 px-3.5 py-2 bg-slate-800/80 border border-slate-700/80 rounded-xl text-slate-200 placeholder-slate-400 text-xs focus:outline-none focus:border-brand-500"
-          />
-        </div>
-      </div>
-
-      {/* Data Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-slate-300 text-xs">
-            <thead className="bg-slate-800/60 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-800">
-              <tr>
+      {/* Companies Table View */}
+      <div className="flex-1 p-6 overflow-y-auto">
+        <div className="bg-white dark:bg-darkbg-card rounded-2xl border border-slate-200 dark:border-darkbg-border shadow-sm overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-darkbg-border bg-slate-50/50 dark:bg-darkbg text-[11px] font-black uppercase text-slate-400">
                 <th className="p-4">Company Name</th>
-                <th className="p-4">Industry & Web</th>
-                <th className="p-4">Phone</th>
-                <th className="p-4">Size & Revenue</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="p-4">Industry</th>
+                <th className="p-4">Employees</th>
+                <th className="p-4">Annual Revenue</th>
+                <th className="p-4">Account Owner</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {loading ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-12 text-slate-400 font-medium">
-                    Loading companies directory...
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+              {filteredCompanies.map(comp => (
+                <tr key={comp.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                  <td className="p-4 font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                      {comp.name.charAt(0)}
+                    </div>
+                    {comp.name}
                   </td>
-                </tr>
-              ) : companies.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-12 text-slate-400">
-                    No companies found matching criteria.
+                  <td className="p-4 text-slate-600 dark:text-slate-300 font-medium flex items-center gap-1.5">
+                    <FiGlobe className="w-3.5 h-3.5 text-slate-400" /> {comp.industry}
                   </td>
+                  <td className="p-4 font-semibold text-slate-500 flex items-center gap-1.5">
+                    <FiUsers className="w-3.5 h-3.5 text-slate-400" /> {comp.employees}
+                  </td>
+                  <td className="p-4 font-extrabold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                    <FiDollarSign className="w-3.5 h-3.5" /> {comp.revenue}
+                  </td>
+                  <td className="p-4 font-bold text-slate-700 dark:text-slate-300">{comp.owner}</td>
                 </tr>
-              ) : (
-                companies.map((company) => (
-                  <tr key={company.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 font-bold flex items-center justify-center">
-                          {company.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-white">{company.name}</p>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="p-4">
-                      <div className="space-y-1">
-                        <p className="font-medium text-slate-200">
-                          {company.industry || 'General Industry'}
-                        </p>
-                        {company.website && (
-                          <a
-                            href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-1.5 text-brand-400 hover:underline text-[11px]"
-                          >
-                            <FiGlobe className="w-3 h-3" />
-                            <span>{company.website}</span>
-                          </a>
-                        )}
-                      </div>
-                    </td>
-
-                    <td className="p-4">
-                      {company.phone ? (
-                        <p className="flex items-center gap-1.5 text-slate-300">
-                          <FiPhone className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{company.phone}</span>
-                        </p>
-                      ) : (
-                        <span className="text-slate-500">N/A</span>
-                      )}
-                    </td>
-
-                    <td className="p-4">
-                      <div className="space-y-1 text-[11px]">
-                        <p className="flex items-center gap-1.5 text-slate-300">
-                          <FiUsers className="w-3 h-3 text-slate-400" />
-                          <span>
-                            {company.employee_count ? `${company.employee_count} employees` : 'N/A'}
-                          </span>
-                        </p>
-                        <p className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                          <FiDollarSign className="w-3 h-3" />
-                          <span>
-                            {company.annual_revenue
-                              ? `$${company.annual_revenue.toLocaleString()}`
-                              : 'N/A'}
-                          </span>
-                        </p>
-                      </div>
-                    </td>
-
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openEditModal(company)}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-                          title="Edit Company"
-                        >
-                          <FiEdit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(company.id)}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 transition-colors"
-                          title="Delete Company"
-                        >
-                          <FiTrash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+              ))}
+              {filteredCompanies.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center text-slate-400 font-bold">No companies found.</td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
-
-        {/* Pagination Footer */}
-        {totalPages > 1 && (
-          <div className="p-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-            <span>
-              Page {page} of {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-                className="p-2 rounded-lg bg-slate-800 disabled:opacity-40 hover:bg-slate-700 text-white transition-colors"
-              >
-                <FiChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                disabled={page === totalPages}
-                onClick={() => setPage(page + 1)}
-                className="p-2 rounded-lg bg-slate-800 disabled:opacity-40 hover:bg-slate-700 text-white transition-colors"
-              >
-                <FiChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Modal Form */}
-      <CompanyModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleCreateOrUpdate}
-        initialData={editingCompany}
-      />
+      {/* Add Company Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white dark:bg-darkbg-card rounded-3xl shadow-2xl border border-slate-200 dark:border-darkbg-border p-6 flex flex-col">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-darkbg-border">
+              <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">Add New Company</h3>
+              <button onClick={() => setShowAddModal(false)} className="cursor-pointer"><FiX className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={handleAddCompany} className="py-4 space-y-3">
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Company Name</label>
+                <input 
+                  type="text" required placeholder="e.g. Acme Inc"
+                  value={newCompany.name} onChange={(e) => setNewCompany({...newCompany, name: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-2.5 text-xs font-semibold outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Industry</label>
+                <input 
+                  type="text" placeholder="e.g. SaaS"
+                  value={newCompany.industry} onChange={(e) => setNewCompany({...newCompany, industry: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-2.5 text-xs font-semibold outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Employees</label>
+                <input 
+                  type="number" placeholder="e.g. 150"
+                  value={newCompany.employees} onChange={(e) => setNewCompany({...newCompany, employees: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-2.5 text-xs font-semibold outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Annual Revenue</label>
+                <input 
+                  type="text" placeholder="e.g. ₹2.5 Cr"
+                  value={newCompany.revenue} onChange={(e) => setNewCompany({...newCompany, revenue: e.target.value})}
+                  className="w-full bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-2.5 text-xs font-semibold outline-none"
+                />
+              </div>
+              <div className="pt-2 flex justify-end gap-2">
+                <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-slate-100 dark:bg-darkbg text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer">Cancel</button>
+                <button type="submit" className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer">Save Company</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
