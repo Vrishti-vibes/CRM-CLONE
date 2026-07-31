@@ -1,52 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { FiSearch, FiPlus, FiFilter, FiX, FiGrid, FiList, FiColumns, FiLayout, FiMessageSquare, FiUsers, FiCheck, FiSliders, FiSend } from 'react-icons/fi';
+import { 
+  FiSearch, FiPlus, FiFilter, FiX, FiGrid, FiList, 
+  FiMessageSquare, FiUsers, FiChevronDown, FiStar, FiChevronLeft, FiSend, FiMinimize2, FiEdit2, FiTrash2 
+} from 'react-icons/fi';
 
-export default function Deals({ onRegisterRef }) {
+export default function Deals() {
   const [subPipelines, setSubPipelines] = useState(() => {
     const saved = localStorage.getItem('crm_sub_pipelines');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
     return [
-      { id: 'standard', name: 'Standard Pipeline', stages: ['Qualification', 'Needs Analysis', 'Proposal Quote', 'Negotiation', 'Closed Won'] },
-      { id: 'partner', name: 'Partner Channel', stages: ['Lead', 'Evaluation', 'Agreement', 'Won'] },
-      { id: 'enterprise', name: 'Enterprise Sales', stages: ['Discovery', 'Demo', 'Security Review', 'Contract', 'Closed'] }
+      { id: 'standard', name: 'Standard Pipeline', stages: ['QUALIFICATION', 'NEEDS ANALYSIS', 'PROPOSAL QUOTE', 'NEGOTIATION', 'CLOSED WON'] }
     ];
   });
 
   const [currentSubPipeline, setCurrentSubPipeline] = useState('Standard Pipeline');
+  const [viewMode, setViewMode] = useState('kanban'); 
   
-  // View Modes: 'kanban', 'list', 'split-horizontal', 'split-vertical'
-  const [viewMode, setViewMode] = useState('kanban');
-  
-  // Modals & Drawers state
-  const [showCreateSubPipeline, setShowCreateSubPipeline] = useState(false);
-  const [newSubPipelineName, setNewSubPipelineName] = useState('');
-  const [openStages, setOpenStages] = useState(['Qualification', 'Needs Analysis', 'Proposal Quote', 'Negotiation']);
-  const [closedStages, setClosedStages] = useState(['Closed Won', 'Closed Lost']);
-
-  // Filter Menu state
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+  const [filterProperty, setFilterProperty] = useState('Touched Records');
+  const [filterValue, setFilterValue] = useState('');
   const [filterOwner, setFilterOwner] = useState('All');
 
-  // Bottom Footer Drawers state
-  const [activeBottomDrawer, setActiveBottomDrawer] = useState(null); // 'chat' | 'contacts' | null
+  const [showViewDropdown, setShowViewDropdown] = useState(false);
+  const [selectedView, setSelectedView] = useState('All Deals');
+  const [viewTab, setViewTab] = useState('all');
+
+  const [showCtrlKModal, setShowCtrlKModal] = useState(false);
+  const [commandQuery, setCommandQuery] = useState('');
+  const [collapsedStages, setCollapsedStages] = useState({});
+
+  const [activeBottomDrawer, setActiveBottomDrawer] = useState(null);
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'ai', text: 'Hello Elena! How can I assist you with your pipeline today?' }
+    { sender: 'ai', text: 'Hello! How can I assist you with your pipeline today?' }
   ]);
   const [chatInput, setChatInput] = useState('');
 
-  // Deals state with localStorage persistence so positions survive page refresh
   const [deals, setDeals] = useState(() => {
     const saved = localStorage.getItem('crm_deals');
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
     return [
-      { id: 1, title: 'Zylker Yearly Subscription', value: '₹5,671', stage: 'Qualification', contact: 'Ted Watson', company: 'Zylker Corp', owner: 'Elena Rostova', date: 'Today' },
-      { id: 2, title: 'Website Development', value: '₹70,000', stage: 'Needs Analysis', contact: 'Ted Watson', company: 'Tech Solutions', owner: 'Alex Morgan', date: 'Jul 31' },
-      { id: 3, title: 'Cloud Migration Setup', value: '₹1,50,000', stage: 'Proposal Quote', contact: 'Sarah Connor', company: 'Cyberdyne', owner: 'Elena Rostova', date: 'Aug 02' },
-      { id: 4, title: 'Enterprise Software License', value: '₹2,50,000', stage: 'Negotiation', contact: 'John Wick', company: 'Continental', owner: 'Alex Morgan', date: 'Aug 05' },
+      { id: 1, title: 'Website Development', value: '₹70,000', stage: 'NEEDS ANALYSIS', contact: 'Tech Solutions', company: 'Tech Solutions', owner: 'Elena Rostova', date: 'Jul 31' },
+      { id: 2, title: 'Cloud Migration Setup', value: '₹1,50,000', stage: 'PROPOSAL QUOTE', contact: 'Cyberdyne', company: 'Cyberdyne', owner: 'Elena Rostova', date: 'Aug 02' },
+      { id: 3, title: 'Enterprise Software License', value: '₹2,50,000', stage: 'NEGOTIATION', contact: 'Continental', company: 'Continental', owner: 'Alex Morgan', date: 'Aug 05' },
+      { id: 4, title: 'Zylker Yearly Subscription', value: '₹5,671', stage: 'QUALIFICATION', contact: 'Zylker Corp', company: 'Zylker Corp', owner: 'Alex Morgan', date: 'Today' },
     ];
   });
 
@@ -58,22 +58,33 @@ export default function Deals({ onRegisterRef }) {
     localStorage.setItem('crm_sub_pipelines', JSON.stringify(subPipelines));
   }, [subPipelines]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowCtrlKModal(prev => !prev);
+      }
+      if (e.key === 'Escape') {
+        setShowCtrlKModal(false);
+        setShowFilterDrawer(false);
+        setShowViewDropdown(false);
+        setActiveBottomDrawer(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newDeal, setNewDeal] = useState({ title: '', value: '', stage: 'Qualification', contact: '', company: '', owner: 'Elena Rostova' });
+  const [newDeal, setNewDeal] = useState({ title: '', value: '', stage: '', contact: '', company: '', owner: 'Elena Rostova' });
 
-  // Get active stages based on selected sub-pipeline
   const activeSpObj = subPipelines.find(sp => sp.name === currentSubPipeline);
-  const stages = activeSpObj ? activeSpObj.stages : ['Qualification', 'Needs Analysis', 'Proposal Quote', 'Negotiation', 'Closed Won'];
+  const stages = activeSpObj ? activeSpObj.stages : ['QUALIFICATION', 'NEEDS ANALYSIS', 'PROPOSAL QUOTE', 'NEGOTIATION', 'CLOSED WON'];
 
-  // Drag and Drop Handlers
   const handleDragStart = (e, dealId) => {
     e.dataTransfer.setData('dealId', dealId);
   };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
+  const handleDragOver = (e) => e.preventDefault();
   const handleDrop = (e, targetStage) => {
     e.preventDefault();
     const dealId = Number(e.dataTransfer.getData('dealId'));
@@ -84,19 +95,15 @@ export default function Deals({ onRegisterRef }) {
   const handleAddDeal = (e) => {
     e.preventDefault();
     if (!newDeal.title.trim()) return;
-    setDeals(prev => [{ id: Date.now(), ...newDeal, date: 'Today' }, ...prev]);
-    setNewDeal({ title: '', value: '', stage: stages[0] || 'Qualification', contact: '', company: '', owner: 'Elena Rostova' });
+    const targetStage = newDeal.stage || stages[0];
+    setDeals(prev => [{ id: Date.now(), ...newDeal, stage: targetStage, date: 'Today' }, ...prev]);
+    setNewDeal({ title: '', value: '', stage: '', contact: '', company: '', owner: 'Elena Rostova' });
     setShowAddModal(false);
   };
 
-  const handleCreateSubPipeline = (e) => {
-    e.preventDefault();
-    if (!newSubPipelineName.trim()) return;
-    const allStages = [...openStages, ...closedStages];
-    setSubPipelines(prev => [...prev, { id: newSubPipelineName.toLowerCase().replace(/\s+/g, '-'), name: newSubPipelineName, stages: allStages }]);
-    setCurrentSubPipeline(newSubPipelineName);
-    setNewSubPipelineName('');
-    setShowCreateSubPipeline(false);
+  const handleDeleteDeal = (e, dealId) => {
+    e.stopPropagation();
+    setDeals(prev => prev.filter(d => d.id !== dealId));
   };
 
   const handleSendMessage = (e) => {
@@ -106,121 +113,107 @@ export default function Deals({ onRegisterRef }) {
     setChatMessages(prev => [...prev, { sender: 'user', text: userMsg }]);
     setChatInput('');
     setTimeout(() => {
-      setChatMessages(prev => [...prev, { sender: 'ai', text: `Got it! I am processing your request regarding "${userMsg}".` }]);
+      setChatMessages(prev => [...prev, { sender: 'ai', text: `Processed your request regarding "${userMsg}".` }]);
     }, 600);
   };
 
-  // Filtered Deals
+  const toggleCollapse = (stage) => {
+    setCollapsedStages(prev => ({ ...prev, [stage]: !prev[stage] }));
+  };
+
   const filteredDeals = deals.filter(d => {
     if (filterOwner !== 'All' && d.owner !== filterOwner) return false;
+    if (filterValue) {
+      const valLower = filterValue.toLowerCase();
+      const matchTitle = d.title.toLowerCase().includes(valLower);
+      const matchCompany = d.company.toLowerCase().includes(valLower);
+      const matchContact = d.contact.toLowerCase().includes(valLower);
+      if (!matchTitle && !matchCompany && !matchContact) return false;
+    }
     return true;
   });
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-50 dark:bg-darkbg text-slate-800 dark:text-slate-100 overflow-hidden select-none relative">
+    <div className="flex flex-col h-full w-full bg-[#f8f9fa] dark:bg-darkbg text-slate-800 dark:text-slate-100 overflow-hidden select-none relative">
       
-      {/* Top Bar with Sub-Pipeline & View Toggles */}
-      <div className="h-14 bg-white dark:bg-darkbg-card border-b border-slate-200 dark:border-darkbg-border px-6 flex items-center justify-between shrink-0 z-10">
-        <div className="flex items-center gap-4">
-          <div className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-darkbg px-3 py-1.5 rounded-xl border border-slate-200 dark:border-darkbg-border">
-            Sales Pipeline Standard
-          </div>
+      {/* Top Bar */}
+      <div className="h-14 bg-white dark:bg-darkbg-card border-b border-slate-200 dark:border-darkbg-border px-4 flex items-center justify-between shrink-0 z-10">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => window.history.back()}
+            title="Go Back"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer transition-colors"
+          >
+            <FiChevronLeft className="w-5 h-5 font-bold" />
+          </button>
 
-          {/* Sub-Pipeline Selector Dropdown */}
-          <div className="flex items-center gap-2 bg-indigo-50/50 dark:bg-darkbg px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-darkbg-border text-xs font-bold">
-            <span className="text-slate-500 font-normal">Sub-Pipeline:</span>
-            <select 
-              value={currentSubPipeline}
-              onChange={(e) => {
-                if (e.target.value === 'CREATE_NEW') {
-                  setShowCreateSubPipeline(true);
-                } else {
-                  setCurrentSubPipeline(e.target.value);
-                }
-              }}
-              className="bg-transparent outline-none font-black text-indigo-600 dark:text-indigo-400 cursor-pointer"
-            >
-              {subPipelines.map(sp => (
-                <option key={sp.id} value={sp.name}>{sp.name}</option>
-              ))}
-              <option value="CREATE_NEW" className="font-bold text-indigo-600 bg-white dark:bg-darkbg">+ Create Sub-Pipeline...</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 relative">
-          {/* View Toggles: Kanban, List, Horizontal Split, Vertical Split */}
-          <div className="flex items-center bg-slate-100 dark:bg-darkbg p-1 rounded-xl text-xs font-bold gap-1">
-            <button 
-              onClick={() => setViewMode('kanban')}
-              title="Kanban Board View"
-              className={`p-1.5 rounded-lg cursor-pointer transition-colors ${viewMode === 'kanban' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-            >
-              <FiGrid className="w-4 h-4" />
-            </button>
-            <button 
-              onClick={() => setViewMode('list')}
-              title="List View"
-              className={`p-1.5 rounded-lg cursor-pointer transition-colors ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-            >
-              <FiList className="w-4 h-4" />
-            </button>
-            <button 
-              onClick={() => setViewMode('split-horizontal')}
-              title="Horizontal Split Sheet View"
-              className={`p-1.5 rounded-lg cursor-pointer transition-colors ${viewMode === 'split-horizontal' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-            >
-              <FiColumns className="w-4 h-4" />
-            </button>
-            <button 
-              onClick={() => setViewMode('split-vertical')}
-              title="Vertical Split Sheet View"
-              className={`p-1.5 rounded-lg cursor-pointer transition-colors ${viewMode === 'split-vertical' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-            >
-              <FiLayout className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Filter Button & Dropdown */}
           <div className="relative">
             <button 
-              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+              onClick={() => setShowViewDropdown(!showViewDropdown)}
+              className="flex items-center gap-2 bg-slate-100 border border-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-full text-xs hover:bg-slate-200 transition-all cursor-pointer"
             >
-              <FiFilter className="w-3.5 h-3.5" /> Filter {filterOwner !== 'All' && '(1)'}
+              <span>{selectedView}</span>
+              <FiChevronDown className="w-3.5 h-3.5" />
             </button>
 
-            {showFilterDropdown && (
-              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-darkbg-card rounded-2xl shadow-xl border border-slate-200 dark:border-darkbg-border p-3 z-30 animate-in fade-in duration-150">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 mb-2">
-                  <span className="text-[11px] font-black uppercase text-slate-400">Filter Deals</span>
-                  <button onClick={() => setShowFilterDropdown(false)} className="text-slate-400 hover:text-slate-600"><FiX className="w-3.5 h-3.5" /></button>
+            {showViewDropdown && (
+              <div className="absolute top-9 left-0 w-64 bg-white dark:bg-darkbg-card border border-slate-200 dark:border-darkbg-border rounded-2xl shadow-xl z-50 p-3 text-xs">
+                <div className="flex border-b border-slate-100 dark:border-slate-800 pb-2 mb-2 gap-4 font-bold text-slate-500">
+                  <button onClick={() => setViewTab('all')} className={`cursor-pointer ${viewTab === 'all' ? 'text-indigo-600 border-b-2 border-indigo-600 pb-0.5' : ''}`}>All Views</button>
+                  <button onClick={() => setViewTab('favorites')} className={`cursor-pointer flex items-center gap-1 ${viewTab === 'favorites' ? 'text-indigo-600 border-b-2 border-indigo-600 pb-0.5' : ''}`}>
+                    <FiStar className="w-3 h-3 text-amber-500 fill-amber-500" /> Favorites
+                  </button>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-500 block">Owner</label>
-                  <select 
-                    value={filterOwner} 
-                    onChange={(e) => setFilterOwner(e.target.value)}
-                    className="w-full bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-2 text-xs font-semibold outline-none cursor-pointer"
-                  >
-                    <option value="All">All Owners</option>
-                    <option value="Elena Rostova">Elena Rostova</option>
-                    <option value="Alex Morgan">Alex Morgan</option>
-                  </select>
-                </div>
-                <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between">
-                  <button onClick={() => { setFilterOwner('All'); setShowFilterDropdown(false); }} className="text-[11px] font-bold text-slate-400 hover:underline">Reset</button>
-                  <button onClick={() => setShowFilterDropdown(false)} className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-[11px] font-bold">Apply</button>
-                </div>
+                {viewTab === 'all' ? (
+                  <div className="space-y-1 font-semibold text-slate-700 dark:text-slate-200">
+                    {['All Deals', 'Closing Next Month', 'Closing This Month', 'My Deals', 'Recently Created Deals'].map((v) => (
+                      <div 
+                        key={v} 
+                        onClick={() => { setSelectedView(v); setShowViewDropdown(false); }}
+                        className={`p-2 rounded-lg cursor-pointer ${selectedView === v ? 'bg-slate-100 text-indigo-600 font-bold' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                      >
+                        {v}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-slate-400 py-3 text-center font-medium">No favorite views saved yet</div>
+                )}
               </div>
             )}
           </div>
 
+          <div className="text-xs font-bold uppercase text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-darkbg px-3 py-1.5 rounded-xl border border-slate-200 dark:border-darkbg-border">
+            SALES PIPELINE STANDARD
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 relative">
           <button 
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-colors"
+            onClick={() => setShowCtrlKModal(true)}
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl text-xs text-slate-400 font-medium hover:border-slate-300 cursor-pointer"
           >
-            <FiPlus className="w-4 h-4" /> Add Deal
+            <FiSearch className="w-3.5 h-3.5" />
+            <span>Search (Ctrl + K)</span>
+          </button>
+
+          <div className="flex items-center bg-slate-100 dark:bg-darkbg p-1 rounded-xl text-xs font-bold gap-1">
+            <button onClick={() => setViewMode('kanban')} title="Kanban" className={`p-1.5 rounded-lg cursor-pointer ${viewMode === 'kanban' ? 'bg-slate-900 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200'}`}><FiGrid className="w-4 h-4" /></button>
+            <button onClick={() => setViewMode('list')} title="List" className={`p-1.5 rounded-lg cursor-pointer ${viewMode === 'list' ? 'bg-slate-900 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200'}`}><FiList className="w-4 h-4" /></button>
+          </div>
+
+          <button 
+            onClick={() => setShowFilterDrawer(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer hover:bg-slate-50 transition-colors shadow-2xs"
+          >
+            <FiFilter className="w-3.5 h-3.5" /> Filter
+          </button>
+
+          <button 
+            onClick={() => { setNewDeal({ title: '', value: '', stage: stages[0], contact: '', company: '', owner: 'Elena Rostova' }); setShowAddModal(true); }}
+            className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-colors"
+          >
+            <FiPlus className="w-4 h-4" /> Deal
           </button>
         </div>
       </div>
@@ -228,49 +221,105 @@ export default function Deals({ onRegisterRef }) {
       {/* Main Content Area */}
       <div className="flex-1 p-6 overflow-x-auto overflow-y-auto">
         
-        {/* 1. KANBAN BOARD VIEW */}
+        {/* KANBAN VIEW (Longer columns: h-[650px]) */}
         {viewMode === 'kanban' && (
-          <div className="flex gap-4 h-full min-w-max pb-4">
+          <div className="flex gap-4 h-full min-w-max pb-4 items-start">
             {stages.map(stage => {
               const stageDeals = filteredDeals.filter(d => d.stage === stage);
               const totalVal = stageDeals.reduce((acc, d) => acc + parseInt(d.value.replace(/[^0-9]/g, '') || 0), 0);
+              const isCollapsed = collapsedStages[stage];
+
+              if (isCollapsed) {
+                return (
+                  <div 
+                    key={stage}
+                    onClick={() => toggleCollapse(stage)}
+                    className="w-12 bg-white dark:bg-darkbg-card rounded-2xl border border-slate-200 dark:border-darkbg-border flex flex-col items-center py-4 cursor-pointer hover:bg-slate-50 transition-all shrink-0 h-[650px]"
+                  >
+                    <span className="text-[10px] font-black uppercase text-slate-400 [writing-mode:vertical-lr] rotate-180 tracking-wider mb-4">
+                      {stage}
+                    </span>
+                    <span className="w-6 h-6 bg-slate-100 text-slate-700 font-bold text-[10px] rounded-full flex items-center justify-center border border-slate-200">
+                      {stageDeals.length}
+                    </span>
+                  </div>
+                );
+              }
+
               return (
                 <div 
                   key={stage} 
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, stage)}
-                  className="w-72 bg-slate-100/70 dark:bg-darkbg-card rounded-2xl border border-slate-200 dark:border-darkbg-border flex flex-col max-h-full"
+                  className="bg-white dark:bg-darkbg-card rounded-2xl border border-slate-200 dark:border-darkbg-border flex flex-col w-72 shrink-0 shadow-xs h-[650px]"
                 >
-                  <div className="p-3.5 border-b border-slate-200 dark:border-darkbg-border flex items-center justify-between shrink-0">
+                  <div className="p-3.5 border-b border-slate-200 dark:border-darkbg-border flex items-center justify-between shrink-0 bg-white rounded-t-2xl">
                     <div>
-                      <h4 className="text-[11px] font-black uppercase text-slate-700 dark:text-slate-200">{stage}</h4>
-                      <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">₹{totalVal.toLocaleString('en-IN')}</span>
+                      <h4 className="text-[11px] font-black uppercase text-slate-800 dark:text-slate-100 tracking-wide">{stage}</h4>
+                      <span className="text-[10px] font-bold text-slate-500">₹{totalVal.toLocaleString('en-IN')} · {stageDeals.length} Deal</span>
                     </div>
-                    <span className="px-2 py-0.5 bg-white dark:bg-darkbg text-[10px] font-black rounded-full border border-slate-200 dark:border-darkbg-border">
-                      {stageDeals.length} Deal{stageDeals.length !== 1 ? 's' : ''}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => toggleCollapse(stage)}
+                        title="Collapse Column"
+                        className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded cursor-pointer"
+                      >
+                        <FiMinimize2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
+
                   <div className="p-3 flex-1 overflow-y-auto space-y-3">
                     {stageDeals.map(deal => (
                       <div 
                         key={deal.id} 
                         draggable
                         onDragStart={(e) => handleDragStart(e, deal.id)}
-                        className="bg-white dark:bg-darkbg p-4 rounded-xl border border-slate-200 dark:border-darkbg-border shadow-xs hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
+                        className="group bg-white dark:bg-darkbg p-3.5 rounded-xl border border-slate-200 dark:border-darkbg-border shadow-2xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing relative"
                       >
-                        <h5 className="text-xs font-black text-slate-900 dark:text-white mb-1">{deal.title}</h5>
-                        <p className="text-[11px] font-bold text-indigo-600 mb-2">{deal.company}</p>
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] font-extrabold text-slate-800 dark:text-slate-100">
+                        {/* Hover Action Buttons (Appears only when cursor hovers over this deal card) */}
+                        <div className="absolute top-2.5 right-2.5 flex items-center gap-1 bg-white dark:bg-darkbg px-1.5 py-1 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            title="Edit Deal"
+                            onClick={(e) => { e.stopPropagation(); }}
+                            className="p-1 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded cursor-pointer"
+                          >
+                            <FiEdit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            title="Delete Deal"
+                            onClick={(e) => handleDeleteDeal(e, deal.id)}
+                            className="p-1 text-rose-500 hover:text-rose-700 rounded cursor-pointer"
+                          >
+                            <FiTrash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white mb-1 pr-10">{deal.title}</h5>
+                        <p className="text-[11px] font-semibold text-slate-600 mb-2">{deal.company}</p>
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] font-bold text-slate-800 dark:text-slate-100">
                           <span>{deal.value}</span>
-                          <span className="text-[10px] font-bold text-slate-400">{deal.date}</span>
+                          <span className="text-[10px] font-medium text-slate-400">{deal.date}</span>
                         </div>
                       </div>
                     ))}
                     {stageDeals.length === 0 && (
-                      <div className="h-24 flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-[11px] font-bold text-slate-400">
-                        Drop deals here
+                      <div className="h-32 flex items-center justify-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-[10px] font-bold text-slate-400">
+                        This stage is empty
                       </div>
                     )}
+                  </div>
+
+                  <div className="p-2.5 border-t border-slate-200 dark:border-darkbg-border bg-white rounded-b-2xl shrink-0">
+                    <button 
+                      onClick={() => {
+                        setNewDeal({ title: '', value: '', stage, contact: '', company: '', owner: 'Elena Rostova' });
+                        setShowAddModal(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-1 py-1.5 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                    >
+                      <FiPlus className="w-3.5 h-3.5" /> Deal
+                    </button>
                   </div>
                 </div>
               );
@@ -278,12 +327,11 @@ export default function Deals({ onRegisterRef }) {
           </div>
         )}
 
-        {/* 2. LIST VIEW */}
         {viewMode === 'list' && (
           <div className="bg-white dark:bg-darkbg-card rounded-2xl border border-slate-200 dark:border-darkbg-border shadow-sm overflow-hidden">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-darkbg-border bg-slate-50/50 dark:bg-darkbg text-[11px] font-black uppercase text-slate-400">
+                <tr className="border-b border-slate-200 dark:border-darkbg-border bg-slate-50 text-[11px] font-bold uppercase text-slate-400">
                   <th className="p-4">Deal Name</th>
                   <th className="p-4">Stage</th>
                   <th className="p-4">Company</th>
@@ -294,90 +342,17 @@ export default function Deals({ onRegisterRef }) {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                 {filteredDeals.map(deal => (
-                  <tr key={deal.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
-                    <td className="p-4 font-black text-slate-900 dark:text-white">{deal.title}</td>
-                    <td className="p-4"><span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 rounded-full font-bold text-[10px]">{deal.stage}</span></td>
-                    <td className="p-4 font-bold text-indigo-600">{deal.company}</td>
-                    <td className="p-4 font-semibold text-slate-600 dark:text-slate-300">{deal.contact}</td>
-                    <td className="p-4 font-extrabold text-slate-900 dark:text-white">{deal.value}</td>
-                    <td className="p-4 font-semibold text-slate-500">{deal.owner}</td>
+                  <tr key={deal.id} className="hover:bg-slate-50">
+                    <td className="p-4 font-bold text-slate-900 dark:text-white">{deal.title}</td>
+                    <td className="p-4"><span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full font-bold text-[10px]">{deal.stage}</span></td>
+                    <td className="p-4 font-semibold text-slate-600">{deal.company}</td>
+                    <td className="p-4 font-medium text-slate-600">{deal.contact}</td>
+                    <td className="p-4 font-bold text-slate-900 dark:text-white">{deal.value}</td>
+                    <td className="p-4 font-medium text-slate-500">{deal.owner}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-
-        {/* 3. HORIZONTAL SPLIT SHEET VIEW */}
-        {viewMode === 'split-horizontal' && (
-          <div className="flex flex-col h-full gap-4">
-            <div className="h-1/2 bg-white dark:bg-darkbg-card rounded-2xl border border-slate-200 dark:border-darkbg-border p-4 overflow-y-auto shadow-sm">
-              <h3 className="text-xs font-black uppercase text-slate-400 mb-3">Pipeline Stage Summary ({currentSubPipeline})</h3>
-              <div className="grid grid-cols-4 gap-4">
-                {stages.slice(0, 4).map(st => (
-                  <div key={st} className="p-3 bg-slate-50 dark:bg-darkbg rounded-xl border border-slate-200 dark:border-darkbg-border">
-                    <span className="text-[10px] font-black text-slate-400 uppercase">{st}</span>
-                    <p className="text-sm font-black text-indigo-600 mt-1">{filteredDeals.filter(d => d.stage === st).length} Deals</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="h-1/2 bg-white dark:bg-darkbg-card rounded-2xl border border-slate-200 dark:border-darkbg-border p-4 overflow-y-auto shadow-sm">
-              <h3 className="text-xs font-black uppercase text-slate-400 mb-3">Deals Sheet View</h3>
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b text-[10px] uppercase text-slate-400 font-black">
-                    <th className="pb-2">Deal Name</th>
-                    <th className="pb-2">Stage</th>
-                    <th className="pb-2">Company</th>
-                    <th className="pb-2">Value</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredDeals.map(d => (
-                    <tr key={d.id}>
-                      <td className="py-2 font-bold">{d.title}</td>
-                      <td className="py-2 text-indigo-600 font-semibold">{d.stage}</td>
-                      <td className="py-2 text-slate-500">{d.company}</td>
-                      <td className="py-2 font-extrabold">{d.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* 4. VERTICAL SPLIT SHEET VIEW */}
-        {viewMode === 'split-vertical' && (
-          <div className="grid grid-cols-2 gap-4 h-full">
-            <div className="bg-white dark:bg-darkbg-card rounded-2xl border border-slate-200 dark:border-darkbg-border p-4 overflow-y-auto shadow-sm">
-              <h3 className="text-xs font-black uppercase text-slate-400 mb-3">Quick Deal Cards</h3>
-              <div className="space-y-2">
-                {filteredDeals.map(d => (
-                  <div key={d.id} className="p-3 bg-slate-50 dark:bg-darkbg rounded-xl border border-slate-200 dark:border-darkbg-border flex justify-between items-center">
-                    <div>
-                      <h4 className="text-xs font-black">{d.title}</h4>
-                      <span className="text-[10px] text-indigo-600 font-bold">{d.company}</span>
-                    </div>
-                    <span className="text-xs font-extrabold">{d.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="bg-white dark:bg-darkbg-card rounded-2xl border border-slate-200 dark:border-darkbg-border p-4 overflow-y-auto shadow-sm">
-              <h3 className="text-xs font-black uppercase text-slate-400 mb-3">Pipeline Performance Metrics</h3>
-              <div className="space-y-4">
-                <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl">
-                  <span className="text-xs font-bold text-indigo-600">Active Sub-Pipeline</span>
-                  <h2 className="text-lg font-black text-slate-900 dark:text-white mt-1">{currentSubPipeline}</h2>
-                </div>
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl">
-                  <span className="text-xs font-bold text-emerald-600">Total Deals Value</span>
-                  <h2 className="text-xl font-black text-slate-900 dark:text-white mt-1">₹4,85,671</h2>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -388,13 +363,13 @@ export default function Deals({ onRegisterRef }) {
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setActiveBottomDrawer(activeBottomDrawer === 'chat' ? null : 'chat')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg cursor-pointer transition-colors ${activeBottomDrawer === 'chat' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg cursor-pointer transition-colors ${activeBottomDrawer === 'chat' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'}`}
           >
             <FiMessageSquare className="w-3.5 h-3.5" /> AI Chat Assistant
           </button>
           <button 
             onClick={() => setActiveBottomDrawer(activeBottomDrawer === 'contacts' ? null : 'contacts')}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg cursor-pointer transition-colors ${activeBottomDrawer === 'contacts' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg cursor-pointer transition-colors ${activeBottomDrawer === 'contacts' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'}`}
           >
             <FiUsers className="w-3.5 h-3.5" /> Contacts
           </button>
@@ -402,12 +377,153 @@ export default function Deals({ onRegisterRef }) {
         <span className="text-[10px] font-bold text-slate-400">Smart Chat (Ctrl+Space)</span>
       </div>
 
-      {/* INTERACTIVE BOTTOM DRAWER MODALS */}
+      {showFilterDrawer && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex justify-start" onClick={() => setShowFilterDrawer(false)}>
+          <div className="w-full max-w-sm bg-white dark:bg-darkbg-card h-full shadow-2xl border-r border-slate-200 p-6 flex flex-col justify-between" onClick={e => e.stopPropagation()}>
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+                <h3 className="text-sm font-bold uppercase text-slate-900 dark:text-white">Filter Sales Pipeline</h3>
+                <button onClick={() => setShowFilterDrawer(false)} className="cursor-pointer text-slate-400 hover:text-slate-600"><FiX className="w-4 h-4" /></button>
+              </div>
+              
+              <div className="py-4 space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Choose a Property</label>
+                  <select 
+                    value={filterProperty} onChange={(e) => setFilterProperty(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium outline-none cursor-pointer"
+                  >
+                    <option value="Touched Records">Touched Records</option>
+                    <option value="Untouched Records">Untouched Records</option>
+                    <option value="Record Action">Record Action</option>
+                    <option value="Related Record Action">Related Record Action</option>
+                    <option value="Latest Email Status">Latest Email Status</option>
+                    <option value="Activities">Activities</option>
+                    <option value="Notes">Notes</option>
+                    <option value="Deal Owner">Deal Owner</option>
+                    <option value="Deal Name">Deal Name</option>
+                    <option value="Company Name">Company Name</option>
+                    <option value="Contact Name">Contact Name</option>
+                    <option value="Sub-Pipeline">Sub-Pipeline</option>
+                    <option value="Stage">Stage</option>
+                    <option value="Amount">Amount</option>
+                    <option value="Closing Date">Closing Date</option>
+                    <option value="Tag">Tag</option>
+                    <option value="Description">Description</option>
+                    <option value="Created By">Created By</option>
+                    <option value="Modified By">Modified By</option>
+                    <option value="Created Time">Created Time</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Filter Keyword / Value</label>
+                  <input 
+                    type="text" placeholder="Search by name, company..."
+                    value={filterValue} onChange={(e) => setFilterValue(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Owner Filter</label>
+                  <select 
+                    value={filterOwner} onChange={(e) => setFilterOwner(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium outline-none cursor-pointer"
+                  >
+                    <option value="All">All Owners</option>
+                    <option value="Elena Rostova">Elena Rostova</option>
+                    <option value="Alex Morgan">Alex Morgan</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-200 flex justify-between gap-2">
+              <button type="button" onClick={() => { setFilterValue(''); setFilterOwner('All'); }} className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold cursor-pointer">Reset</button>
+              <button type="button" onClick={() => setShowFilterDrawer(false)} className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer">Apply Filter</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCtrlKModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-start justify-center pt-20" onClick={() => setShowCtrlKModal(false)}>
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-3 border-b border-slate-200 flex items-center gap-2">
+              <FiSearch className="w-4 h-4 text-slate-400" />
+              <input 
+                type="text" autoFocus placeholder="Search deals, contacts, or commands..." 
+                value={commandQuery} onChange={(e) => setCommandQuery(e.target.value)}
+                className="w-full text-xs font-medium outline-none bg-transparent text-slate-800" 
+              />
+              <button onClick={() => setShowCtrlKModal(false)} className="text-[10px] text-slate-400 font-bold px-1.5 py-0.5 bg-slate-100 rounded cursor-pointer">ESC</button>
+            </div>
+            <div className="p-3 text-slate-500 text-xs">
+              <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">Quick Actions</div>
+              <div onClick={() => { setShowAddModal(true); setShowCtrlKModal(false); }} className="p-2 hover:bg-slate-100 rounded-lg cursor-pointer font-bold text-slate-700">
+                + Add New Deal
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4" onClick={() => setShowAddModal(false)}>
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+              <h3 className="text-sm font-bold uppercase text-slate-900">Add New Deal</h3>
+              <button onClick={() => setShowAddModal(false)} className="cursor-pointer text-slate-400 hover:text-slate-600"><FiX className="w-4 h-4" /></button>
+            </div>
+            <form onSubmit={handleAddDeal} className="py-4 space-y-3">
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Deal Title</label>
+                <input 
+                  type="text" required placeholder="e.g. Cloud Setup"
+                  value={newDeal.title} onChange={(e) => setNewDeal({...newDeal, title: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-medium outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Value (₹)</label>
+                <input 
+                  type="text" placeholder="e.g. ₹50,000"
+                  value={newDeal.value} onChange={(e) => setNewDeal({...newDeal, value: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-medium outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Stage</label>
+                <select 
+                  value={newDeal.stage} onChange={(e) => setNewDeal({...newDeal, stage: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-medium outline-none cursor-pointer"
+                >
+                  {stages.map(st => <option key={st} value={st}>{st}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Company</label>
+                <input 
+                  type="text" placeholder="e.g. Cyberdyne"
+                  value={newDeal.company} onChange={(e) => setNewDeal({...newDeal, company: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-medium outline-none"
+                />
+              </div>
+              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600">Cancel</button>
+                <button type="submit" className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md">Save Deal</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {activeBottomDrawer && (
-        <div className="absolute bottom-12 right-6 w-96 h-[420px] bg-white dark:bg-darkbg-card rounded-3xl shadow-2xl border border-slate-200 dark:border-darkbg-border flex flex-col z-50 animate-in slide-in-from-bottom duration-200 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-darkbg-border flex items-center justify-between bg-slate-50 dark:bg-darkbg">
-            <h4 className="text-xs font-black uppercase text-slate-900 dark:text-white flex items-center gap-2">
-              {activeBottomDrawer === 'chat' ? <><FiMessageSquare className="text-indigo-600" /> AI Assistant</> : <><FiUsers className="text-indigo-600" /> Quick Contacts</>}
+        <div className="absolute bottom-12 right-6 w-96 h-[420px] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col z-50 overflow-hidden">
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+            <h4 className="text-xs font-bold uppercase text-slate-900 flex items-center gap-2">
+              {activeBottomDrawer === 'chat' ? <><FiMessageSquare /> AI Assistant</> : <><FiUsers /> Quick Contacts</>}
             </h4>
             <button onClick={() => setActiveBottomDrawer(null)} className="cursor-pointer text-slate-400 hover:text-slate-600"><FiX className="w-4 h-4" /></button>
           </div>
@@ -417,19 +533,19 @@ export default function Deals({ onRegisterRef }) {
               <div className="flex-1 overflow-y-auto space-y-3 pr-1">
                 {chatMessages.map((m, idx) => (
                   <div key={idx} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[80%] p-3 rounded-2xl text-xs font-semibold ${m.sender === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-100 dark:bg-darkbg text-slate-800 dark:text-slate-200 rounded-bl-none border border-slate-200 dark:border-darkbg-border'}`}>
+                    <div className={`max-w-[80%] p-3 rounded-2xl text-xs font-medium ${m.sender === 'user' ? 'bg-slate-900 text-white rounded-br-none' : 'bg-slate-100 text-slate-800 rounded-bl-none border border-slate-200'}`}>
                       {m.text}
                     </div>
                   </div>
                 ))}
               </div>
-              <form onSubmit={handleSendMessage} className="mt-3 flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <form onSubmit={handleSendMessage} className="mt-3 flex items-center gap-2 pt-2 border-t border-slate-100">
                 <input 
                   type="text" placeholder="Ask AI about pipeline..."
                   value={chatInput} onChange={(e) => setChatInput(e.target.value)}
-                  className="flex-1 bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-2.5 text-xs font-semibold outline-none"
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-medium outline-none"
                 />
-                <button type="submit" className="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl cursor-pointer shadow-sm"><FiSend className="w-4 h-4" /></button>
+                <button type="submit" className="p-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl cursor-pointer shadow-sm"><FiSend className="w-4 h-4" /></button>
               </form>
             </div>
           ) : (
@@ -439,120 +555,16 @@ export default function Deals({ onRegisterRef }) {
                 { name: 'Sarah Connor', role: 'Director, Cyberdyne', email: 'sarah@cyberdyne.io' },
                 { name: 'John Wick', role: 'Owner, Continental', email: 'john@continental.com' }
               ].map((c, i) => (
-                <div key={i} className="p-3 bg-slate-50 dark:bg-darkbg rounded-xl border border-slate-200 dark:border-darkbg-border flex items-center justify-between">
+                <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                   <div>
-                    <h5 className="text-xs font-black">{c.name}</h5>
+                    <h5 className="text-xs font-bold text-slate-900">{c.name}</h5>
                     <p className="text-[10px] text-slate-500">{c.role}</p>
                   </div>
-                  <span className="text-[10px] font-bold text-indigo-600">{c.email}</span>
+                  <span className="text-[10px] font-bold text-slate-700">{c.email}</span>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* CREATE SUB-PIPELINE DRAWER MODAL */}
-      {showCreateSubPipeline && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex justify-end">
-          <div className="w-full max-w-md bg-white dark:bg-darkbg-card h-full shadow-2xl border-l border-slate-200 dark:border-darkbg-border p-6 flex flex-col justify-between animate-in slide-in-from-right duration-200">
-            <div>
-              <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-darkbg-border">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">Create Sub-Pipeline</h3>
-                  <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold">Sales Pipeline</span>
-                </div>
-                <button onClick={() => setShowCreateSubPipeline(false)} className="cursor-pointer text-slate-400 hover:text-slate-600"><FiX className="w-4 h-4" /></button>
-              </div>
-              
-              <form onSubmit={handleCreateSubPipeline} className="py-4 space-y-4">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Sub-Pipeline Name</label>
-                  <input 
-                    type="text" required placeholder="e.g. Enterprise Channel"
-                    value={newSubPipelineName} onChange={(e) => setNewSubPipelineName(e.target.value)}
-                    className="w-full bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-3 text-xs font-semibold outline-none focus:border-indigo-600"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 block mb-2">Open Stages</label>
-                  <div className="space-y-2">
-                    {openStages.map((st, i) => (
-                      <input key={i} type="text" defaultValue={st} className="w-full bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-2.5 text-xs font-semibold outline-none" />
-                    ))}
-                    <button type="button" onClick={() => setOpenStages([...openStages, 'New Stage'])} className="text-xs font-bold text-indigo-600 hover:underline">+ Stage</button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 block mb-2">Closed Stages</label>
-                  <div className="space-y-2">
-                    {closedStages.map((st, i) => (
-                      <input key={i} type="text" defaultValue={st} className="w-full bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-2.5 text-xs font-semibold outline-none" />
-                    ))}
-                    <button type="button" onClick={() => setClosedStages([...closedStages, 'New Closed Stage'])} className="text-xs font-bold text-indigo-600 hover:underline">+ Stage</button>
-                  </div>
-                </div>
-              </form>
-            </div>
-
-            <div className="pt-4 border-t border-slate-200 dark:border-darkbg-border flex justify-end gap-2">
-              <button type="button" onClick={() => setShowCreateSubPipeline(false)} className="px-5 py-2.5 bg-slate-100 dark:bg-darkbg text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer">Cancel</button>
-              <button type="button" onClick={handleCreateSubPipeline} className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer">Save</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Deal Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white dark:bg-darkbg-card rounded-3xl shadow-2xl border border-slate-200 dark:border-darkbg-border p-6 flex flex-col">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-darkbg-border">
-              <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">Add New Deal</h3>
-              <button onClick={() => setShowAddModal(false)} className="cursor-pointer text-slate-400 hover:text-slate-600"><FiX className="w-4 h-4" /></button>
-            </div>
-            <form onSubmit={handleAddDeal} className="py-4 space-y-3">
-              <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Deal Title</label>
-                <input 
-                  type="text" required placeholder="e.g. Cloud Setup"
-                  value={newDeal.title} onChange={(e) => setNewDeal({...newDeal, title: e.target.value})}
-                  className="w-full bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-2.5 text-xs font-semibold outline-none"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Value (₹)</label>
-                <input 
-                  type="text" placeholder="e.g. ₹50,000"
-                  value={newDeal.value} onChange={(e) => setNewDeal({...newDeal, value: e.target.value})}
-                  className="w-full bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-2.5 text-xs font-semibold outline-none"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Stage</label>
-                <select 
-                  value={newDeal.stage} onChange={(e) => setNewDeal({...newDeal, stage: e.target.value})}
-                  className="w-full bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-2.5 text-xs font-semibold outline-none cursor-pointer"
-                >
-                  {stages.map(st => <option key={st} value={st}>{st}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Company</label>
-                <input 
-                  type="text" placeholder="e.g. Acme Inc"
-                  value={newDeal.company} onChange={(e) => setNewDeal({...newDeal, company: e.target.value})}
-                  className="w-full bg-slate-100 dark:bg-darkbg border border-slate-200 dark:border-darkbg-border rounded-xl p-2.5 text-xs font-semibold outline-none"
-                />
-              </div>
-              <div className="pt-2 flex justify-end gap-2">
-                <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-slate-100 dark:bg-darkbg text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer">Cancel</button>
-                <button type="submit" className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer">Save Deal</button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
 
